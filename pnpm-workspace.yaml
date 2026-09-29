@@ -1,0 +1,9 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+allowBuilds:
+  core-js: true
+  esbuild: true
+  unrs-resolver: true
+patchedDependencies:
+  '@met4citizen/talkinghead@1.7.0': patches/@met4citizen__talkinghead@1.7.0.patch
