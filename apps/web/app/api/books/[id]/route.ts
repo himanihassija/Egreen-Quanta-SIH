@@ -16,14 +16,29 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const url = SOURCES[id];
   if (!url) return new Response('Unknown book', { status: 404 });
 
-  const upstream = await fetch(url, { next: { revalidate: 86400 } });
-  if (!upstream.ok || !upstream.body) {
-    return new Response('Could not fetch the book', { status: 502 });
+  let upstream: Response;
+  try {
+    // Some hosts turn away requests without a browser-like user agent.
+    // No Next.js data cache here: it caps entries at 2 MB and these PDFs are larger.
+    upstream = await fetch(url, {
+      cache: 'no-store',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36',
+        Accept: 'application/pdf,*/*',
+      },
+    });
+  } catch (err) {
+    return new Response(`Could not reach the book's host: ${String(err)}`, { status: 502 });
   }
-  return new Response(upstream.body, {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Cache-Control': 'public, max-age=86400',
-    },
+  if (!upstream.ok || !upstream.body) {
+    return new Response(`The book's host answered ${upstream.status}`, { status: 502 });
+  }
+  const headers = new Headers({
+    'Content-Type': 'application/pdf',
+    'Cache-Control': 'public, max-age=86400',
   });
+  const length = upstream.headers.get('content-length');
+  if (length) headers.set('Content-Length', length);
+  return new Response(upstream.body, { headers });
 }

@@ -38,9 +38,9 @@ export function loadPdf(url: string): Promise<PdfDoc> {
  */
 export function PdfPageImage({ url, page }: { url: string; page: number }) {
   const holder = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(false);
-  const [state, setState] = useState<'idle' | 'done' | 'error'>('idle');
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const el = holder.current;
@@ -56,7 +56,7 @@ export function PdfPageImage({ url, page }: { url: string; page: number }) {
   }, [visible]);
 
   useEffect(() => {
-    if (!visible || state !== 'idle') return;
+    if (!visible || src) return;
     let cancelled = false;
     let task: { promise: Promise<void>; cancel: () => void } | null = null;
     (async () => {
@@ -64,35 +64,41 @@ export function PdfPageImage({ url, page }: { url: string; page: number }) {
         const doc = await loadPdf(url);
         const p = await doc.getPage(page);
         const viewport = p.getViewport({ scale: 1.4 });
-        const c = canvas.current;
-        if (!c || cancelled) return;
-        c.width = viewport.width;
-        c.height = viewport.height;
+        // Render off-screen, then show it as an <img> exactly like uploaded PDF
+        // pages, so the whole page scales to fit instead of being clipped.
+        const c = document.createElement('canvas');
+        c.width = Math.ceil(viewport.width);
+        c.height = Math.ceil(viewport.height);
         const ctx = c.getContext('2d');
-        if (!ctx) return;
+        if (!ctx || cancelled) return;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, c.width, c.height);
-        task = p.render({ canvasContext: ctx, viewport, canvas: c });
+        task = p.render({ canvasContext: ctx, viewport });
         await task!.promise;
-        if (!cancelled) setState('done');
+        if (!cancelled) setSrc(c.toDataURL('image/jpeg', 0.85));
       } catch {
         // A cancelled render (unmount / strict-mode re-run) is not a failure.
-        if (!cancelled) setState('error');
+        if (!cancelled) setFailed(true);
       }
     })();
     return () => {
       cancelled = true;
       task?.cancel();
     };
-  }, [visible, state, url, page]);
+  }, [visible, src, url, page]);
 
   return (
-    <div ref={holder} style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <canvas ref={canvas} className="pdf-canvas-img" style={{ opacity: state === 'done' ? 1 : 0, transition: 'opacity .2s' }} />
-      {state !== 'done' && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, opacity: 0.6 }}>
-          {state === 'error' ? 'Page failed to load' : `Loading page ${page}…`}
-        </div>
+    <div
+      ref={holder}
+      style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={`Page ${page}`} className="pdf-canvas-img" />
+      ) : (
+        <span style={{ fontSize: 12, opacity: 0.6, color: '#333' }}>
+          {failed ? 'Page failed to load' : `Loading page ${page}…`}
+        </span>
       )}
     </div>
   );
