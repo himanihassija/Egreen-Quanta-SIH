@@ -14,40 +14,44 @@ import {
 import { parseAgentTurn } from '../src/agent/control.js';
 import type { LibraryBook } from '@echosphere/shared-types';
 
-test('Digital Library catalog loads default NCERT curriculum books', () => {
-  const book = getLibraryBook('ncert-7-ch2');
-  assert.ok(book, 'NCERT chapter 2 book should be registered');
-  assert.equal(book.pages.length, 8, 'Book should have 8 pages');
+test('Digital Library catalog loads the quantum reference shelf', () => {
+  const book = getLibraryBook('wong-intro-qc');
+  assert.ok(book, 'Wong reference book should be registered');
   assert.equal(book.pages[0]?.isCover, true, 'Page 1 should be cover');
-  assert.equal(book.pages[7]?.isEndCover, true, 'Page 8 should be end cover');
+  assert.ok(book.sourceUrl?.startsWith('/api/books/'), 'Reference books load through the proxy');
 
   const books = getAllBooks();
   assert.ok(books.length >= 2, 'Should return at least 2 default books');
 });
 
+// The NCERT chapters are no longer on the default shelf; the search tests below
+// keep using them as fixture content by adding them to a test session.
+addBookToSession('search-fixture', NCERT_CLASS7_CH2_BOOK, 'teacher');
+addBookToSession('search-fixture', NCERT_CLASS7_CH4_BOOK, 'teacher');
+
 test('findPageInBook accurately locates topics and page numbers', () => {
   // Query for common denominator / LCM
-  const matchLCM = findPageInBook('ncert-7-ch2', 'finding a common denominator LCM');
+  const matchLCM = findPageInBook('ncert-7-ch2', 'finding a common denominator LCM', 'search-fixture');
   assert.ok(matchLCM, 'Should match common denominator');
   assert.equal(matchLCM.page, 2, 'Should point to page 3 (index 2: 2.2 Method)');
 
   // Query for worked example step by step
-  const matchWorked = findPageInBook('ncert-7-ch2', 'worked example step by step');
+  const matchWorked = findPageInBook('ncert-7-ch2', 'worked example step by step', 'search-fixture');
   assert.ok(matchWorked, 'Should match worked example');
   assert.equal(matchWorked.page, 3, 'Should point to page 4 (index 3: 2.3 Worked example)');
 
   // Query for common error adding denominators
-  const matchError = findPageInBook('ncert-7-ch2', 'common error adding denominators');
+  const matchError = findPageInBook('ncert-7-ch2', 'common error adding denominators', 'search-fixture');
   assert.ok(matchError, 'Should match common error');
   assert.equal(matchError.page, 4, 'Should point to page 5 (index 4: 2.4 Common error)');
 
   // Query for practice drill
-  const matchDrill = findPageInBook('ncert-7-ch2', 'practice exercises try these');
+  const matchDrill = findPageInBook('ncert-7-ch2', 'practice exercises try these', 'search-fixture');
   assert.ok(matchDrill, 'Should match practice');
   assert.equal(matchDrill.page, 6, 'Should point to page 7 (index 6: 2.6 Practice)');
 
   // Query for direct page citation "page 6"
-  const matchPage6 = findPageInBook('ncert-7-ch2', 'page 6');
+  const matchPage6 = findPageInBook('ncert-7-ch2', 'page 6', 'search-fixture');
   assert.ok(matchPage6, 'Should match page 6');
   assert.equal(matchPage6.page, 5, 'Should point to index 5 (Page 6: Subtracting unlike fractions)');
 });

@@ -48,6 +48,36 @@ export function DigitalLibraryStage({
   const teacherPage = library?.currentPage ?? 0;
 
   const [viewMode, setViewMode] = useState<'reader' | 'shelf'>('reader');
+  const [preparing, setPreparing] = useState<string | null>(null);
+
+  // Reference-shelf books arrive as a stub; the teacher's client loads the PDF
+  // once and shares the full page list with the class.
+  const isStub = Boolean(book.sourceUrl) && !book.pages.some((p) => p.pdfPage);
+  useEffect(() => {
+    if (!isStub) setPreparing((m) => (m && m.startsWith('Could not') ? m : null));
+  }, [isStub]);
+  useEffect(() => {
+    if (!isTeacher || !isStub || !onAddBook) return;
+    let cancelled = false;
+    setPreparing('Loading book…');
+    void import('./BookParsers')
+      .then(({ hydrateRemoteBook }) =>
+        hydrateRemoteBook(book, (done, total) => {
+          if (!cancelled) setPreparing(`Indexing pages ${done}/${total}…`);
+        }),
+      )
+      .then((full) => (cancelled ? undefined : onAddBook(full)))
+      .catch(() => {
+        if (!cancelled) setPreparing('Could not load this book. Check the internet connection and reopen it.');
+      })
+      .finally(() => {
+        if (!cancelled) setPreparing((m) => (m && m.startsWith('Could not') ? m : null));
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book.id, isStub, isTeacher]);
   const [localPage, setLocalPage] = useState(teacherPage);
   const [soundActive, setSoundActive] = useState(true);
 
@@ -195,8 +225,11 @@ export function DigitalLibraryStage({
           <aside className="stage-sidebar">
             <div className="sidebar-section-title">CHAPTER CONTENTS</div>
             <div className="chapter-chips-list">
+              {preparing && <p className="text-xs" style={{ opacity: 0.8, padding: '0.25rem 0' }}>{preparing}</p>}
               {book.pages.map((p, idx) => {
                 if (p.isCover) return null;
+                // Long reference books list chapters only, not every page.
+                if (book.sourceUrl && p.pdfPage && !p.heading) return null;
                 const isCurrent = localPage > 0 && (idx === localPage || idx === localPage + 1);
                 return (
                   <button

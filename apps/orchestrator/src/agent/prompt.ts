@@ -125,7 +125,7 @@ Fields, all optional:
 
 - \`"circuit"\`: send when you are explaining a quantum circuit and want the class to see it. \`{"circuit":{"qubits":2,"gates":[{"gate":"h","qubit":0},{"gate":"cnot","qubit":0,"target":1}]}}\`. \`qubits\` is 1 to 4. Each gate has a \`gate\` name — \`h\`, \`x\`, \`y\`, \`z\`, \`s\`, \`t\`, \`cnot\`, \`cz\` or \`swap\` — and a \`qubit\` it sits on, numbered from 0. \`cnot\`, \`cz\` and \`swap\` need a second wire in \`target\`, and \`qubit\` is the control. Gates run left to right in the order you list them, so the order **is** the physics: H then CNOT entangles, CNOT then H does not. The bars showing each outcome's probability appear under the circuit on their own — explain what the class should expect to see, but never read the percentages out as if you had computed them, and never claim a state is entangled unless you placed a controlled gate after a superposition. Send it when you are teaching a specific circuit, not on every turn that mentions qubits.
 
-- \`"library"\`: send when citing or opening a specific textbook page from the curriculum. \`{"library":{"action":"open","bookId":"ncert-7-ch2","page":5}}\`. Note: page numbers in \`page\` are 0-indexed (e.g. Page 6 is \`page: 5\`). Always say the citation out loud in your spoken turn before the object (e.g., "That is the worked example on page 6."). The textbook will open and glow on that page for the whole class.
+- \`"library"\`: send when citing or opening a specific textbook page from the quantum computing reference shelf (wong-intro-qc, dewolf-qc-notes). \`{"library":{"action":"open","bookId":"wong-intro-qc","page":5}}\`. Note: page numbers in \`page\` are 0-indexed (e.g. Page 6 is \`page: 5\`). Always say the citation out loud in your spoken turn before the object (e.g., "That is the worked example on page 6."). The textbook will open and glow on that page for the whole class.
 
 - \`"quiz"\`: send **only** when you have just asked a quiz question out loud. \`{"topic":"...","question":"...","options":["...","...","...","..."],"answer":"<letter>","difficulty":"easy"}\`. Exactly four options, in the same A, B, C, D order you spoke them, each short enough to say aloud. The \`question\` and \`options\` must be word-for-word what you spoke, because they are also rendered on screen.
 
@@ -137,8 +137,8 @@ Answering one student:
 Noticing a shared misconception:
 \`{"to":"Bilal","gap":{"topic":"common denominator","students":["Ana","Bilal"]}}\`
 
-Citing a textbook page from the curriculum:
-\`{"library":{"action":"open","bookId":"ncert-7-ch2","page":5}}\`
+Citing a textbook page from the quantum computing reference shelf (wong-intro-qc, dewolf-qc-notes):
+\`{"library":{"action":"open","bookId":"wong-intro-qc","page":5}}\`
 
 Putting a circuit on screen while explaining entanglement:
 \`{"circuit":{"qubits":2,"gates":[{"gate":"h","qubit":0},{"gate":"cnot","qubit":0,"target":1}]}}\`

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import type { LibraryBook, LibraryPage } from '@echosphere/shared-types';
 import { playPageFlipSound, playCornerFoldSound } from './sound';
+import { PdfPageImage } from './PdfPageImage';
 
 export interface FlipBookProps {
   book: LibraryBook;
@@ -73,7 +74,7 @@ export function FlipBook({
   // When book or canFlip permission changes, update key to replace host <div> completely
   useEffect(() => {
     setBookInstanceKey((k) => k + 1);
-  }, [book.id, canFlip]);
+  }, [book.id, canFlip, book.pages.length]);
 
   // Initialize PageFlip instance on the freshly mounted host
   useEffect(() => {
@@ -208,6 +209,22 @@ export function FlipBook({
                     <h2>{p.title}</h2>
                     <p>{p.subtitle}</p>
                   </div>
+                </div>
+              );
+            }
+
+            // Reference-shelf PDF page, rendered lazily from the book's source
+            if (p.pdfPage && book.sourceUrl) {
+              return (
+                <div
+                  key={idx}
+                  className={`page page-image-mode ${isGlow ? 'glow' : ''}`}
+                  data-a={p.sectionColor || 'violet'}
+                  data-idx={idx}
+                >
+                  <div className="tab" />
+                  <PdfPageImage url={book.sourceUrl} page={p.pdfPage} />
+                  <div className="pnum">{p.pageNumber}</div>
                 </div>
               );
             }

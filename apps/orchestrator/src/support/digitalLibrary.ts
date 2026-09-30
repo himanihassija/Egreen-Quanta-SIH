@@ -190,9 +190,47 @@ export const NCERT_CLASS7_CH4_BOOK: LibraryBook = {
   ],
 };
 
+function referenceBook(id: string, title: string, subtitle: string, sourceUrl: string, crest: string): LibraryBook {
+  return {
+    id,
+    title,
+    subtitle,
+    subject: 'Quantum Computing',
+    kind: 'pdf',
+    addedBy: 'Reference Shelf',
+    sourceUrl,
+    pages: [
+      { pageNumber: 0, isCover: true, crest, title, subtitle, rawText: `${title}. ${subtitle}.` },
+      {
+        pageNumber: 1,
+        heading: 'Preparing this book',
+        body: ['The teacher\'s screen is loading the pages. They will appear here in a moment.'],
+        rawText: `${title} is being prepared.`,
+      },
+    ],
+  };
+}
+
+/** Freely available quantum computing textbooks, fetched through the web app's /api/books proxy. */
+export const WONG_QC_BOOK = referenceBook(
+  'wong-intro-qc',
+  'Introduction to Classical and Quantum Computing',
+  'THOMAS G. WONG · FREE TEXTBOOK',
+  '/api/books/wong',
+  '⟨ψ⟩',
+);
+export const DEWOLF_QC_BOOK = referenceBook(
+  'dewolf-qc-notes',
+  'Quantum Computing: Lecture Notes',
+  'RONALD DE WOLF · ARXIV 1907.09415',
+  '/api/books/dewolf',
+  '⊗',
+);
+export const DEFAULT_BOOK_ID = WONG_QC_BOOK.id;
+
 const GLOBAL_BOOKS: Map<string, LibraryBook> = new Map([
-  [NCERT_CLASS7_CH2_BOOK.id, NCERT_CLASS7_CH2_BOOK],
-  [NCERT_CLASS7_CH4_BOOK.id, NCERT_CLASS7_CH4_BOOK],
+  [WONG_QC_BOOK.id, WONG_QC_BOOK],
+  [DEWOLF_QC_BOOK.id, DEWOLF_QC_BOOK],
 ]);
 
 // Per-session custom books store
@@ -201,7 +239,9 @@ const SESSION_BOOKS: Map<string, Map<string, LibraryBook>> = new Map();
 export function getSessionBooks(sessionId: string): LibraryBook[] {
   const sessionMap = SESSION_BOOKS.get(sessionId);
   const custom = sessionMap ? Array.from(sessionMap.values()) : [];
-  return [...Array.from(GLOBAL_BOOKS.values()), ...custom];
+  // A session copy (e.g. a reference book the teacher's client has loaded) replaces its shelf stub.
+  const globals = Array.from(GLOBAL_BOOKS.values()).map((b) => sessionMap?.get(b.id) ?? b);
+  return [...globals, ...custom.filter((b) => !GLOBAL_BOOKS.has(b.id))];
 }
 
 export function getLibraryBook(bookId: string, sessionId?: string): LibraryBook | undefined {
@@ -252,7 +292,7 @@ export function getAllBooks(): LibraryBook[] {
   return Array.from(GLOBAL_BOOKS.values());
 }
 
-export function createInitialLibraryState(bookId = NCERT_CLASS7_CH2_BOOK.id): LibraryPublicState {
+export function createInitialLibraryState(bookId = DEFAULT_BOOK_ID): LibraryPublicState {
   return {
     activeBookId: bookId,
     currentPage: 0,

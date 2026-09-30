@@ -1,6 +1,6 @@
 /**
  * Animated space backdrop for the join screen: twinkling starfield, a slowly
- * rotating illustrated Earth, a big ATHENA title, a small "Powered by Agora"
+ * rotating illustrated Earth, a big ATHENA title, a small "Powered by Egreen Quanta"
  * constellation, a soft cursor glow, and a synthesized click sound.
  *
  * Renders as a fixed, full-viewport layer behind whatever is passed as
@@ -41,6 +41,169 @@ const TINTS = ['255,255,255', '210,225,255', '255,240,220'];
 export function SpaceJoinBackground({ children }: { children: React.ReactNode }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const atomRef = useRef<HTMLCanvasElement>(null);
+
+  // Quantum atom: glowing core, streaked 3D orbitals and orbiting bokeh.
+  useEffect(() => {
+    const canvas = atomRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+
+    let raf = 0;
+    let w = 0;
+    let h = 0;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const STRAND_COLORS = ['255,255,255', '190,160,255', '120,220,255', '230,140,255', '170,255,200', '255,220,150'];
+    const orbits = [
+      { tiltX: 1.15, tiltZ: 0.35, r: 0.62, speed: 0.12, yaw: 0.32, strands: 7 },
+      { tiltX: 1.2, tiltZ: -0.9, r: 0.55, speed: -0.09, yaw: -0.26, strands: 6 },
+      { tiltX: 0.35, tiltZ: 1.35, r: 0.48, speed: 0.15, yaw: 0.4, strands: 6 },
+      { tiltX: 1.35, tiltZ: 2.1, r: 0.78, speed: 0.06, yaw: -0.18, strands: 8 },
+    ];
+
+    interface Particle { a: number; r: number; tx: number; tz: number; sp: number; size: number; hue: string; }
+    const particles: Particle[] = Array.from({ length: 220 }, () => ({
+      a: Math.random() * Math.PI * 2,
+      r: 0.1 + Math.pow(Math.random(), 1.6) * 0.8,
+      tx: Math.random() * Math.PI,
+      tz: Math.random() * Math.PI,
+      sp: (Math.random() * 0.25 + 0.05) * (Math.random() < 0.5 ? -1 : 1),
+      size: Math.random() < 0.15 ? 2.5 + Math.random() * 3 : 0.6 + Math.random() * 1.4,
+      hue: ['150,140,255', '200,170,255', '120,190,255', '255,255,255'][Math.floor(Math.random() * 4)],
+    }));
+
+    function resize() {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas!.width = w * dpr;
+      canvas!.height = h * dpr;
+      canvas!.style.width = w + 'px';
+      canvas!.style.height = h + 'px';
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Point on a tilted circle, projected with a light perspective.
+    function project(angle: number, radius: number, tx: number, tz: number, spin: number, yaw = 0) {
+      let x = Math.cos(angle) * radius;
+      let y = Math.sin(angle) * radius;
+      let z = 0;
+      const y1 = y * Math.cos(tx) - z * Math.sin(tx);
+      const z1 = y * Math.sin(tx) + z * Math.cos(tx);
+      y = y1; z = z1;
+      const tz2 = tz + spin;
+      const x2 = x * Math.cos(tz2) - y * Math.sin(tz2);
+      const y2 = x * Math.sin(tz2) + y * Math.cos(tz2);
+      x = x2; y = y2;
+      if (yaw) {
+        const x3 = x * Math.cos(yaw) + z * Math.sin(yaw);
+        const z3 = -x * Math.sin(yaw) + z * Math.cos(yaw);
+        x = x3; z = z3;
+      }
+      const persp = 1 / (1 - z / (radius * 4 + 1));
+      return { x: x * persp, y: y * persp, z };
+    }
+
+    function draw(t: number) {
+      const time = t / 1000;
+      ctx!.clearRect(0, 0, w, h);
+      const cx = w / 2;
+      const cy = h * 0.46;
+      const unit = Math.min(w * 1.1, h * 1.9) * 0.8;
+
+      ctx!.globalCompositeOperation = 'lighter';
+
+      const haze = ctx!.createRadialGradient(cx, cy, 0, cx, cy, unit * 0.75);
+      haze.addColorStop(0, 'rgba(150,70,255,0.4)');
+      haze.addColorStop(0.4, 'rgba(90,50,220,0.18)');
+      haze.addColorStop(1, 'rgba(40,20,120,0)');
+      ctx!.fillStyle = haze;
+      ctx!.fillRect(0, 0, w, h);
+
+      for (const [oi, o] of orbits.entries()) {
+        const spin = time * o.speed;
+        const yaw = time * o.yaw;
+        const wobble = Math.sin(time * 0.35 + oi * 1.7) * 0.18;
+        for (let s = 0; s < o.strands; s++) {
+          const radius = unit * o.r * (1 + (s - o.strands / 2) * 0.012);
+          const color = STRAND_COLORS[s % STRAND_COLORS.length];
+          const tx = o.tiltX + wobble + s * 0.006;
+          ctx!.lineWidth = s === 0 ? 1.8 : 1;
+          ctx!.strokeStyle = `rgba(${color},0.2)`;
+          ctx!.beginPath();
+          for (let i = 0; i <= 120; i++) {
+            const p = project((i / 120) * Math.PI * 2, radius, tx, o.tiltZ, spin, yaw);
+            if (i === 0) ctx!.moveTo(cx + p.x, cy + p.y); else ctx!.lineTo(cx + p.x, cy + p.y);
+          }
+          ctx!.stroke();
+
+          const head = time * (0.5 + s * 0.04) * Math.sign(o.speed || 1) + s * 0.3;
+          const trail = 1.4;
+          const steps = 40;
+          for (let i = 0; i < steps; i++) {
+            const a0 = head - trail * (1 - i / steps);
+            const a1 = head - trail * (1 - (i + 1) / steps);
+            const p0 = project(a0, radius, tx, o.tiltZ, spin, yaw);
+            const p1 = project(a1, radius, tx, o.tiltZ, spin, yaw);
+            const depth = p1.z > 0 ? 0.55 : 1;
+            ctx!.strokeStyle = `rgba(${color},${((i / steps) * 1 * depth).toFixed(3)})`;
+            ctx!.beginPath();
+            ctx!.moveTo(cx + p0.x, cy + p0.y);
+            ctx!.lineTo(cx + p1.x, cy + p1.y);
+            ctx!.stroke();
+          }
+        }
+      }
+
+      for (const p of particles) {
+        const q = project(p.a + time * p.sp, unit * p.r, p.tx, p.tz, time * 0.03);
+        const alpha = p.size > 2.4 ? 0.3 : 0.9;
+        const r = p.size * (q.z > 0 ? 0.8 : 1.15);
+        const g = ctx!.createRadialGradient(cx + q.x, cy + q.y, 0, cx + q.x, cy + q.y, r * 2.2);
+        g.addColorStop(0, `rgba(${p.hue},${alpha})`);
+        g.addColorStop(1, `rgba(${p.hue},0)`);
+        ctx!.fillStyle = g;
+        ctx!.beginPath();
+        ctx!.arc(cx + q.x, cy + q.y, r * 2.2, 0, Math.PI * 2);
+        ctx!.fill();
+      }
+
+      for (let k = 0; k < 3; k++) {
+        const rr = unit * (0.07 + k * 0.018);
+        ctx!.strokeStyle = 'rgba(200,180,255,0.35)';
+        ctx!.lineWidth = 0.9;
+        ctx!.beginPath();
+        for (let i = 0; i <= 60; i++) {
+          const p = project((i / 60) * Math.PI * 2, rr, 1.1 + k * 0.7, k * 1.3, time * (0.8 + k * 0.3));
+          if (i === 0) ctx!.moveTo(cx + p.x, cy + p.y); else ctx!.lineTo(cx + p.x, cy + p.y);
+        }
+        ctx!.stroke();
+      }
+
+      const pulse = 1 + Math.sin(time * 2) * 0.08;
+      const coreR = unit * 0.075 * pulse;
+      const core = ctx!.createRadialGradient(cx, cy, 0, cx, cy, coreR * 2.4);
+      core.addColorStop(0, 'rgba(255,255,255,1)');
+      core.addColorStop(0.18, 'rgba(235,215,255,0.95)');
+      core.addColorStop(0.45, 'rgba(170,90,255,0.55)');
+      core.addColorStop(1, 'rgba(110,40,220,0)');
+      ctx!.fillStyle = core;
+      ctx!.beginPath();
+      ctx!.arc(cx, cy, coreR * 2.4, 0, Math.PI * 2);
+      ctx!.fill();
+
+      ctx!.globalCompositeOperation = 'source-over';
+      raf = requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    raf = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
 
   // Starfield: three depth layers, twinkling + slow drift.
   useEffect(() => {
@@ -354,132 +517,11 @@ export function SpaceJoinBackground({ children }: { children: React.ReactNode })
 
       <div className="sjb-stage">
         <canvas ref={canvasRef} className="sjb-canvas" />
+        <canvas ref={atomRef} className="sjb-canvas" />
 
         <div className="sjb-title-wrap">
           <div className="sjb-title">ATHENA</div>
-          <div className="sjb-subtitle">Your AI Co-Teacher</div>
-        </div>
-
-        <div className="sjb-globe-wrap">
-          <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="sjbOcean" cx="38%" cy="30%" r="85%">
-                <stop offset="0%" stopColor="#cdeefb" />
-                <stop offset="30%" stopColor="#6fc0e6" />
-                <stop offset="65%" stopColor="#2f86bd" />
-                <stop offset="100%" stopColor="#1c5a8c" />
-              </radialGradient>
-              <radialGradient id="sjbRimGlow" cx="38%" cy="30%" r="60%">
-                <stop offset="62%" style={{ stopColor: 'var(--eco-glow)', stopOpacity: 0 }} />
-                <stop offset="88%" style={{ stopColor: 'var(--eco-glow)', stopOpacity: 0.25 }} />
-                <stop offset="100%" style={{ stopColor: 'var(--eco-glow)', stopOpacity: 0 }} />
-              </radialGradient>
-              <radialGradient id="sjbSpecular" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
-                <stop offset="60%" stopColor="rgba(255,255,255,0.12)" />
-                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-              </radialGradient>
-              <linearGradient id="sjbLand1" x1="10%" y1="0%" x2="90%" y2="100%">
-                <stop offset="0%" stopColor="#b8f0b0" />
-                <stop offset="45%" stopColor="#6fbf6e" />
-                <stop offset="100%" stopColor="#3a8f52" />
-              </linearGradient>
-              <linearGradient id="sjbLand2" x1="10%" y1="0%" x2="90%" y2="100%">
-                <stop offset="0%" stopColor="#a3e0a0" />
-                <stop offset="100%" stopColor="#4a9a5a" />
-              </linearGradient>
-              <linearGradient id="sjbLand3" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#d9c383" />
-                <stop offset="100%" stopColor="#b89257" />
-              </linearGradient>
-              <clipPath id="sjbSphereClip"><circle cx="200" cy="200" r="150" /></clipPath>
-              <radialGradient id="sjbTerminator" cx="70%" cy="55%" r="85%">
-                <stop offset="45%" stopColor="rgba(5,15,30,0)" />
-                <stop offset="100%" stopColor="rgba(5,15,30,0.38)" />
-              </radialGradient>
-              <radialGradient id="sjbMoon" cx="35%" cy="30%" r="75%">
-                <stop offset="0%" stopColor="#d8d5ea" />
-                <stop offset="100%" stopColor="#726d90" />
-              </radialGradient>
-              <filter id="sjbCloudNoise" x="-20%" y="-20%" width="140%" height="140%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.014 0.02" numOctaves={5} seed={11} result="noise" />
-                <feColorMatrix
-                  in="noise"
-                  type="matrix"
-                  values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 3.2 -1.55"
-                />
-              </filter>
-              <filter id="sjbLandGrain" x="-20%" y="-20%" width="140%" height="140%">
-                <feTurbulence type="fractalNoise" baseFrequency={0.35} numOctaves={2} seed={4} result="grain" />
-                <feColorMatrix
-                  in="grain"
-                  type="matrix"
-                  values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.14 0"
-                />
-              </filter>
-              <filter id="sjbOceanGrain" x="-20%" y="-20%" width="140%" height="140%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.06 0.09" numOctaves={3} seed={8} result="grain" />
-                <feColorMatrix
-                  in="grain"
-                  type="matrix"
-                  values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.08 0"
-                />
-              </filter>
-            </defs>
-
-            <circle cx="200" cy="200" r="168" fill="url(#sjbRimGlow)" />
-
-            <g className="sjb-moon" transform="translate(340,100)">
-              <circle r="15" fill="url(#sjbMoon)" stroke="#0a1c2c" strokeWidth={2.5} />
-              <circle cx="-4" cy="-3" r="3" fill="rgba(20,20,40,0.2)" />
-            </g>
-            <g className="sjb-moon sjb-moon-2" transform="translate(28,268)">
-              <circle r="11" fill="url(#sjbMoon)" stroke="#0a1c2c" strokeWidth={2.2} />
-            </g>
-
-            <circle cx="200" cy="200" r="150" fill="url(#sjbOcean)" stroke="#0a1c2c" strokeWidth={3} />
-            <circle cx="200" cy="200" r="150" fill="url(#sjbOceanGrain)" clipPath="url(#sjbSphereClip)" style={{ mixBlendMode: 'overlay' }} />
-
-            <g className="sjb-globe-land">
-              <g clipPath="url(#sjbSphereClip)">
-                <path
-                  d="M96 72 Q112 60 128 66 Q144 52 160 60 Q172 50 186 56 Q198 46 212 54 Q228 48 240 62 Q252 56 262 68 Q272 78 268 94 Q278 100 272 114 Q276 128 258 132 Q262 144 244 148 Q236 158 220 150 Q210 164 192 156 Q182 168 166 158 Q152 168 138 156 Q122 162 114 146 Q102 148 96 132 Q84 128 86 112 Q76 106 82 92 Q78 80 96 72 Z"
-                  fill="url(#sjbLand1)" stroke="#0a1c2c" strokeWidth={2.2} strokeLinejoin="round"
-                />
-                <path
-                  d="M150 150 Q164 140 178 148 Q190 138 204 148 Q218 142 228 154 Q240 150 236 166 Q246 172 238 186 Q244 196 228 202 Q230 214 214 216 Q210 228 194 222 Q184 232 172 220 Q158 226 154 212 Q142 214 140 198 Q130 196 134 182 Q124 176 132 164 Q136 154 150 150 Z"
-                  fill="url(#sjbLand2)" stroke="#0a1c2c" strokeWidth={2.2} strokeLinejoin="round"
-                />
-                <path
-                  d="M74 190 Q86 182 96 190 Q108 184 114 196 Q124 202 118 214 Q124 224 110 228 Q104 236 92 230 Q80 234 74 222 Q64 218 68 206 Q66 196 74 190 Z"
-                  fill="#a3e0a0" stroke="#0a1c2c" strokeWidth={2} strokeLinejoin="round"
-                />
-                <path
-                  d="M266 160 Q278 152 288 160 Q298 156 300 170 Q304 180 292 186 Q286 194 274 188 Q264 190 262 176 Q258 166 266 160 Z"
-                  fill="#5aab5f" stroke="#0a1c2c" strokeWidth={1.9} strokeLinejoin="round"
-                />
-                <path
-                  d="M250 118 Q262 110 274 116 Q286 110 292 122 Q298 132 288 142 Q292 152 278 156 Q268 164 258 154 Q248 148 250 136 Q244 126 250 118 Z"
-                  fill="url(#sjbLand3)" stroke="#0a1c2c" strokeWidth={2.2} strokeLinejoin="round"
-                />
-                <path
-                  d="M50 50 Q80 34 112 38 Q142 28 170 46 Q156 60 132 58 Q112 68 92 60 Q68 70 50 50 Z"
-                  fill="#f5fbfc" stroke="#0a1c2c" strokeWidth={2} strokeLinejoin="round"
-                />
-                <path
-                  d="M56 300 Q88 320 122 314 Q150 328 176 320 Q160 304 136 306 Q116 296 96 300 Q76 294 56 300 Z"
-                  fill="#f5fbfc" stroke="#0a1c2c" strokeWidth={2} strokeLinejoin="round"
-                />
-                <circle cx="200" cy="200" r="150" fill="url(#sjbLandGrain)" style={{ mixBlendMode: 'multiply' }} />
-                <rect x="0" y="0" width="400" height="400" filter="url(#sjbCloudNoise)" opacity={0.8} />
-                <circle cx="200" cy="200" r="150" fill="url(#sjbTerminator)" />
-              </g>
-            </g>
-
-            <ellipse cx="150" cy="130" rx="46" ry="30" fill="url(#sjbSpecular)" clipPath="url(#sjbSphereClip)" style={{ mixBlendMode: 'screen' }} />
-
-            <circle cx="200" cy="200" r="150" fill="none" stroke="#0a1c2c" strokeWidth={3} />
-          </svg>
+          <div className="sjb-subtitle">Your AI Quantum Lab</div>
         </div>
 
         <svg className="sjb-float-body sjb-ringed-planet" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -525,7 +567,7 @@ export function SpaceJoinBackground({ children }: { children: React.ReactNode })
           <circle className="sjb-cstar s5" cx="120" cy="28" r="2" />
           <circle className="sjb-cstar s2" cx="146" cy="18" r="1.8" />
           <text x="8" y="52" className="sjb-clabel">POWERED BY</text>
-          <text x="8" y="66" className="sjb-clabel" style={{ fontSize: 13, letterSpacing: '0.14em', opacity: 0.95 }}>AGORA</text>
+          <text x="8" y="66" className="sjb-clabel" style={{ fontSize: 13, letterSpacing: '0.14em', opacity: 0.95 }}>EGREEN QUANTA</text>
         </svg>
       </div>
 

@@ -29,6 +29,9 @@ import { Model3DStage } from '@/components/classroom/Model3DStageLazy';
 import { ExcalidrawBoard } from '@/components/classroom/ExcalidrawBoardLazy';
 import { DigitalLibraryStage } from '@/components/library/DigitalLibraryStageLazy';
 import { ClassroomDrawer, type DrawerTab } from '@/components/classroom/ClassroomDrawer';
+import QuantumPlayground from '@/components/quantum/QuantumPlayground';
+import { QuantumLabLauncher } from '@/components/quantum/QuantumLabLauncher';
+import { QuantumLab } from '@/components/quantum/lab/QuantumLab';
 import { MiroWorkspacePane } from '@/components/workspace/MiroWorkspacePane';
 import { OneOnOneTutorModal } from '@/components/support/OneOnOneTutorModal';
 import { LanguageSelector } from '@/components/support/LanguageSelector';
@@ -570,6 +573,21 @@ export default function ClassroomPage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
+
+      <QuantumLabLauncher live={Boolean(view.quantum?.open)}>
+        <QuantumLab
+          live={Boolean(view.quantum?.open)}
+          classBoard={
+            <QuantumPlayground
+              sessionId={sessionId}
+              participantId={identity.participantId}
+              role="student"
+              quantum={view.quantum}
+              verdicts={view.quantumVerdicts}
+            />
+          }
+        />
+      </QuantumLabLauncher>
 
       {!view.ended && (
         <QuizOverlay quizzes={view.quizzes} onAnswer={answer} />

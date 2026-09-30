@@ -85,11 +85,11 @@ export function ShelfView({
   };
 
   const getSpineGradient = (book: LibraryBook, idx: number) => {
-    if (book.id === 'ncert-7-ch2') {
-      return 'linear-gradient(135deg, #FFB020 0%, #D97706 50%, #92400E 100%)';
+    if (book.id === 'wong-intro-qc') {
+      return 'linear-gradient(135deg, #A78BFA 0%, #7C3AED 50%, #4C1D95 100%)';
     }
-    if (book.id === 'ncert-7-ch4') {
-      return 'linear-gradient(135deg, #2DD4BF 0%, #0D9488 50%, #115E59 100%)';
+    if (book.id === 'dewolf-qc-notes') {
+      return 'linear-gradient(135deg, #22D3EE 0%, #0891B2 50%, #164E63 100%)';
     }
     const gradients = [
       'linear-gradient(135deg, #A78BFA 0%, #7C3AED 50%, #4C1D95 100%)',
@@ -106,7 +106,7 @@ export function ShelfView({
         <div>
           <h2 className="shelf-title">Classroom Digital Library</h2>
           <p className="shelf-subtitle">
-            Curated curriculum textbooks, teacher presentations, and class notes synchronized live.
+            Quantum computing reference books, teacher presentations, and class notes synchronized live.
           </p>
         </div>
       </div>
@@ -115,7 +115,7 @@ export function ShelfView({
         {/* Books currently on shelf */}
         {books.map((b, idx) => {
           const isActive = b.id === activeBookId;
-          const isCore = b.id === 'ncert-7-ch2' || b.id === 'ncert-7-ch4';
+          const isCore = b.id === 'wong-intro-qc' || b.id === 'dewolf-qc-notes';
           return (
             <div
               key={b.id}

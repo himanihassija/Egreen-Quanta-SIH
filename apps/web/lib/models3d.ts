@@ -1,19 +1,19 @@
-/**
+﻿/**
  * Static registry of the 3D models available in the model library.
  *
  * Each model file lives at apps/web/public/models/<file>, which Next.js
- * serves automatically at /models/<file> — no API route needed to fetch
+ * serves automatically at /models/<file> â€” no API route needed to fetch
  * the .glb itself. This registry is just the metadata (name, subject,
  * search terms) that drives the picker UI and the search bar; the actual
  * geometry is loaded client-side by <model-viewer> from the public path.
  *
  * `id` is what gets broadcast over the wire (ClassroomEvent's
- * `ActiveModel.modelId`) — every client resolves it back to a full Model3D
+ * `ActiveModel.modelId`) â€” every client resolves it back to a full Model3D
  * via `getModel()` rather than trusting anything about the model over the
  * network beyond its id.
  */
 
-export type ModelSubject = 'Biology' | 'Astronomy' | 'Physics' | 'Chemistry' | 'Math';
+export type ModelSubject = 'Qubits' | 'Gates' | 'Hardware' | 'Networks' | 'Waves';
 
 export interface Model3D {
   id: string;
@@ -32,137 +32,95 @@ export interface Model3D {
 
 export const MODELS_3D: Model3D[] = [
   {
-    id: 'beating-heart',
-    name: 'Beating Heart',
-    file: 'beating-heart.glb',
-    subject: 'Biology',
-    description: 'Human heart, chambers and major vessels.',
+    id: 'quantum-computer',
+    name: 'Quantum Computer',
+    file: 'quantum_computer.glb',
+    subject: 'Hardware',
+    description: 'The hardware behind a quantum computer.',
   },
   {
-    id: 'human-brain',
-    name: 'Human Brain',
-    file: 'human_brain.glb',
-    subject: 'Biology',
-    description: 'Lobes, hemispheres, and major surface structures.',
+    id: 'quantum-2d-register',
+    name: '2D Qubit Register',
+    file: 'quantum_2d_ca_register.glb',
+    subject: 'Qubits',
+    description: 'A grid of qubits working as one register.',
   },
   {
-    id: 'skull',
-    name: 'Human Skull',
-    file: 'skull_downloadable.glb',
-    subject: 'Biology',
-    description: 'Cranial and facial bone structure.',
+    id: 'cuboctahedron-qubit',
+    name: 'Cuboctahedron Qubit',
+    file: 'cuboctahedron_qubit.glb',
+    subject: 'Qubits',
+    description: 'A qubit visualised as a cuboctahedron.',
   },
   {
-    id: 'nervous-system',
-    name: 'Nervous System',
-    file: 'nervous_system.glb',
-    subject: 'Biology',
-    description: 'Central and peripheral nervous system layout.',
+    id: 'macroscopic-qubit',
+    name: 'Macroscopic Qubit',
+    file: 'macroscopic_quantum_qubit.glb',
+    subject: 'Qubits',
+    description: 'A qubit shown at a scale you can see.',
   },
   {
-    id: 'digestive-system',
-    name: 'Digestive System',
-    file: 'digestive_system.glb',
-    subject: 'Biology',
-    description: 'Full digestive tract',
+    id: 'quantum-cube',
+    name: 'Quantum Cube',
+    file: 'quantum_cube.glb',
+    subject: 'Qubits',
+    description: 'A cube of qubit states to explore.',
   },
   {
-    id: 'animal-cell',
-    name: 'Animal Cell',
-    file: 'animal_cell.glb',
-    subject: 'Biology',
-    description: 'Organelles inside a typical animal cell.',
+    id: 'cnot-gate',
+    name: 'CNOT Gate',
+    file: 'quantum_gate_cnot.glb',
+    subject: 'Gates',
+    description: 'The controlled-NOT gate that creates entanglement.',
   },
   {
-    id: 'plant-cell',
-    name: 'Plant Cell',
-    file: 'plant_cell.glb',
-    subject: 'Biology',
-    description: 'Cell wall, chloroplasts, and other plant organelles.',
+    id: 'cylindrical-quantum-network',
+    name: 'Cylindrical Quantum Network',
+    file: 'cylindrical_quantum_network.glb',
+    subject: 'Networks',
+    description: 'Qubits linked together in a cylindrical network.',
   },
   {
-    id: 'chloroplast',
-    name: 'Chloroplast',
-    file: 'chloroplast.glb',
-    subject: 'Biology',
-    description: 'Internal structure of a chloroplast, site of photosynthesis.',
+    id: 'quantum-generator',
+    name: 'Quantum Generator',
+    file: 'quantum_generator.glb',
+    subject: 'Hardware',
+    description: 'A quantum generator device.',
   },
   {
-    id: 'bee-pollination',
-    name: 'Bee Pollination',
-    file: 'bug_pollination_by_bees.glb',
-    subject: 'Biology',
-    description: 'How bees transfer pollen between flowers.',
+    id: 'quantum-wave',
+    name: 'Quantum Wave',
+    file: 'quantum_wave.glb',
+    subject: 'Waves',
+    description: 'A quantum wave evolving through space and time.',
   },
   {
-    id: 'solar-system',
-    name: 'Solar System (Orrery)',
-    file: 'solar_system_model_orrery.glb',
-    subject: 'Astronomy',
-    description: 'Sun and planets in relative orbital motion.',
+    id: 'quantum-discord-surface',
+    name: 'Quantum Discord Surface',
+    file: 'quantum_discord_surface.glb',
+    subject: 'Waves',
+    description: 'A surface plot of quantum discord and amplification.',
   },
   {
-    id: 'earth-core',
-    name: "Earth's Core",
-    file: 'earth_core_v2.glb',
-    subject: 'Astronomy',
-    description: "Cross-section of Earth's inner and outer core, mantle, and crust.",
+    id: 'quantum-ring',
+    name: 'Quantum Ring',
+    file: 'quantum_ring.glb',
+    subject: 'Waves',
+    description: 'A quantum ring structure.',
   },
   {
-    id: 'asteroid',
-    name: 'Asteroid',
-    file: 'asteroid.glb',
-    subject: 'Astronomy',
-    description: 'Irregular rocky asteroid surface detail.',
+    id: 'quantum-knot',
+    name: 'Quantum Knot',
+    file: 'quantum_knot.glb',
+    subject: 'Waves',
+    description: 'A knotted quantum field structure.',
   },
   {
-    id: 'satellite',
-    name: 'Satellite',
-    file: 'satelite.glb',
-    subject: 'Astronomy',
-    description: 'Orbital satellite structure and solar panels.',
-  },
-  {
-    id: 'circumstellar-disk',
-    name: 'Circumstellar Disk',
-    file: 'circumstellar_disk.glb',
-    subject: 'Astronomy',
-    description: 'Disk of gas and dust orbiting a young star.',
-  },
-  {
-    id: 'atom',
-    name: 'Atom',
-    file: 'atom.glb',
-    subject: 'Physics',
-    description: 'Nucleus and electron orbitals.',
-  },
-  {
-    id: 'plasma',
-    name: 'Plasma',
-    file: 'evanescent_plasma.glb',
-    subject: 'Physics',
-    description: 'Ionized gas, the fourth state of matter.',
-  },
-  {
-    id: 'solenoid-field',
-    name: 'Magnetic Field of a Solenoid',
-    file: 'magnetic_field_of_solenoid_by_yuyalyj.glb',
-    subject: 'Physics',
-    description: 'Field lines generated by a current-carrying coil.',
-  },
-  {
-    id: 'periodic-table',
-    name: 'Periodic Table',
-    file: 'periodic_table.glb',
-    subject: 'Chemistry',
-    description: 'Full periodic table of elements, in 3D.',
-  },
-  {
-    id: 'pythagorean-theorem',
-    name: 'Pythagorean Theorem',
-    file: 'pythagorean_theorem.glb',
-    subject: 'Math',
-    description: 'Visual proof of a² + b² = c² on a right triangle.',
+    id: 'quantum-hoops',
+    name: 'Quantum Hoops',
+    file: 'quantum_hoops.glb',
+    subject: 'Hardware',
+    description: 'Interactive quantum hoops (use the J and K keys).',
   },
 ];
 
@@ -185,3 +143,4 @@ export function searchModels(query: string): Model3D[] {
       m.description.toLowerCase().includes(q),
   );
 }
+

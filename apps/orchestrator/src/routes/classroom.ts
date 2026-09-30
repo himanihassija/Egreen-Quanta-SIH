@@ -1350,7 +1350,7 @@ export async function classroomRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/sessions/:sessionId/library', async (request, reply) => {
     const session = requireSession(request, reply);
     if (!session) return;
-    const activeBookId = session.library?.activeBookId || 'ncert-7-ch2';
+    const activeBookId = session.library?.activeBookId || 'wong-intro-qc';
     const book = getLibraryBook(activeBookId, session.sessionId);
     const books = getSessionBooks(session.sessionId);
     return reply.send({
@@ -1379,6 +1379,7 @@ export async function classroomRoutes(app: FastifyInstance): Promise<void> {
         subtitle: z.string().optional().default(''),
         subject: z.string().optional().default('Class Notes'),
         kind: z.enum(['curriculum', 'pdf', 'pptx', 'text']),
+        sourceUrl: z.string().startsWith('/api/books/').optional(),
         pages: z.array(z.any()),
       }),
     });
@@ -1519,7 +1520,7 @@ export async function classroomRoutes(app: FastifyInstance): Promise<void> {
     const { page, bookId, participantId, glow } = schema.parse(request.body);
 
     const isTeacherUser = participantId ? isTeacher(session, participantId) : true;
-    const targetBookId = bookId || session.library?.activeBookId || 'ncert-7-ch2';
+    const targetBookId = bookId || session.library?.activeBookId || 'wong-intro-qc';
 
     // If locked to teacher, non-teachers CANNOT turn the classroom page
     if (session.library?.isLocked && !isTeacherUser) {
@@ -1652,7 +1653,7 @@ export async function classroomRoutes(app: FastifyInstance): Promise<void> {
     if (!q) {
       return reply.code(400).send({ error: 'Missing search query q' });
     }
-    const targetBookId = bookId || session.library?.activeBookId || 'ncert-7-ch2';
+    const targetBookId = bookId || session.library?.activeBookId || 'wong-intro-qc';
     const result = findPageInBook(targetBookId, q, session.sessionId);
     return reply.send({ result });
   });

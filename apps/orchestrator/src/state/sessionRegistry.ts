@@ -372,7 +372,7 @@ export function createSession(
     },
     quantum: emptyQuantumState(),
     library: {
-      activeBookId: 'ncert-7-ch2',
+      activeBookId: 'wong-intro-qc',
       currentPage: 0,
       isLocked: true,
       isPresenting: false,

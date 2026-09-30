@@ -17,6 +17,8 @@ export interface LibraryPage {
   work?: string;
   drill?: string[];
   imageSrc?: string; // Rasterized canvas data URL or extracted slide image
+  /** 1-indexed page in the book's `sourceUrl` PDF, rendered lazily on the client. */
+  pdfPage?: number;
   isCover?: boolean;
   isEndCover?: boolean;
   crest?: string;
@@ -34,6 +36,8 @@ export interface LibraryBook {
   addedBy?: string; // 'Curriculum' | teacher participant name
   createdAt?: string;
   chapterNumber?: number;
+  /** Same-origin URL of a PDF whose pages are rendered on demand instead of shipped as images. */
+  sourceUrl?: string;
   pages: LibraryPage[];
 }
 

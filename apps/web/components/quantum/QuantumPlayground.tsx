@@ -3,13 +3,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
   QuantumCircuit,
-  QuantumGate,
   QuantumGateName,
   QuantumPublicState,
   QuantumVerdict,
   Role,
 } from '@echosphere/shared-types';
 import { orchestratorClient } from '@/lib/orchestrator';
+import { CircuitView, GateChip, ProbBars } from './lab/theme';
 
 interface QuantumPlaygroundProps {
   sessionId: string;
@@ -38,12 +38,6 @@ const PALETTE: Array<{ gate: QuantumGateName; label: string; hint: string; twoQu
   { gate: 'cz', label: 'CZ', hint: 'Controlled-Z — flips the sign when both are 1', twoQubit: true },
   { gate: 'swap', label: '⇄', hint: 'SWAP — exchanges two qubits', twoQubit: true },
 ];
-
-/** How a gate reads on the wire diagram. */
-function gateLabel(gate: QuantumGate): string {
-  const found = PALETTE.find((p) => p.gate === gate.gate);
-  return found?.label ?? gate.gate.toUpperCase();
-}
 
 export default function QuantumPlayground({
   sessionId,
@@ -173,6 +167,18 @@ export default function QuantumPlayground({
     [sessionId, participantId],
   );
 
+  const closeBoard = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await orchestratorClient.closeQuantum(sessionId, participantId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not close the board');
+    } finally {
+      setBusy(false);
+    }
+  }, [sessionId, participantId]);
+
   if (!quantum?.open) {
     // The teacher gets the lesson picker here, not just a notice: starting a
     // walkthrough is what opens the playground, so hiding the picker behind
@@ -230,11 +236,22 @@ export default function QuantumPlayground({
             {quantum.lessonId ? 'Walkthrough' : 'Shared circuit'}
           </h3>
           {quantum.lessonId && isTeacher && (
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-[var(--eco-cream-faint)]">step {quantum.stepIndex + 1}</span>
               <button
                 type="button"
-                onClick={() => void step(-1)}
+                onClick={() => void closeBoard()}
                 disabled={busy}
+                className="rounded-md border border-[var(--eco-rule)] bg-[var(--eco-ink-sunken)] font-medium text-[var(--eco-cream-dim)] transition hover:bg-[color-mix(in_srgb,var(--eco-cream)_8%,var(--eco-ink-sunken))] disabled:opacity-40 px-3 py-1 text-xs"
+                title="Close this walkthrough and go back to the lesson list"
+              >
+                ✕ Exit
+              </button>
+              <button
+                type="button"
+                onClick={() => void (quantum.stepIndex === 0 ? closeBoard() : step(-1))}
+                disabled={busy}
+                title={quantum.stepIndex === 0 ? 'Back to the lesson list' : 'Previous step'}
                 className="rounded-md border border-[var(--eco-rule)] bg-[var(--eco-ink-sunken)] font-medium text-[var(--eco-cream)] transition hover:bg-[color-mix(in_srgb,var(--eco-cream)_8%,var(--eco-ink-sunken))] disabled:opacity-40 px-3 py-1 text-xs"
               >
                 ← Back
@@ -248,6 +265,16 @@ export default function QuantumPlayground({
                 Next gate →
               </button>
             </div>
+          )}
+          {!quantum.lessonId && isTeacher && (
+            <button
+              type="button"
+              onClick={() => void closeBoard()}
+              disabled={busy}
+              className="rounded-md border border-[var(--eco-rule)] bg-[var(--eco-ink-sunken)] font-medium text-[var(--eco-cream-dim)] transition hover:bg-[color-mix(in_srgb,var(--eco-cream)_8%,var(--eco-ink-sunken))] disabled:opacity-40 px-3 py-1 text-xs"
+            >
+              ← Back to lessons
+            </button>
           )}
         </header>
 
@@ -329,16 +356,13 @@ export default function QuantumPlayground({
 
           <div className="mb-3 flex flex-wrap gap-2">
             {PALETTE.map((p) => (
-              <button
+              <GateChip
                 key={p.gate}
-                type="button"
+                gate={p.gate}
+                size={40}
                 title={p.hint}
                 onClick={() => addGate(p.gate, p.twoQubit === true)}
-                disabled={p.twoQubit === true && draft.qubits < 2}
-                className="rounded-md border border-[var(--eco-rule)] bg-[var(--eco-ink-sunken)] font-medium text-[var(--eco-cream)] transition hover:bg-[color-mix(in_srgb,var(--eco-cream)_8%,var(--eco-ink-sunken))] disabled:opacity-40 min-w-[2.5rem] px-2 py-1.5 font-mono text-sm"
-              >
-                {p.label}
-              </button>
+              />
             ))}
           </div>
 
@@ -415,45 +439,7 @@ export default function QuantumPlayground({
  * coordinate maths for something flexbox already does correctly at any width.
  */
 function CircuitDiagram({ circuit }: { circuit: QuantumCircuit }) {
-  return (
-    <div className="overflow-x-auto rounded-lg border border-[var(--eco-rule)] bg-[var(--eco-ink-sunken)] p-3">
-      {Array.from({ length: circuit.qubits }, (_, q) => (
-        <div key={q} className="flex items-center gap-1 py-1">
-          <span className="w-8 shrink-0 font-mono text-xs text-[var(--eco-cream-faint)]">q{q}</span>
-          <div className="relative flex flex-1 items-center">
-            <div className="absolute inset-x-0 h-px bg-[var(--eco-rule)]" />
-            <div className="relative flex gap-2">
-              {circuit.gates.map((g, i) => {
-                const onControl = g.qubit === q;
-                const onTarget = g.target === q;
-                if (!onControl && !onTarget) {
-                  // A spacer keeps every wire's columns aligned, so gate 3 sits
-                  // above gate 3 on the wire below it.
-                  return <div key={i} className="h-7 w-7 shrink-0" />;
-                }
-                return (
-                  <div
-                    key={i}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded border font-mono text-xs ${
-                      onControl && g.target !== undefined
-                        ? 'border-[var(--eco-athena)] bg-[var(--eco-athena)] text-black'
-                        : 'border-[var(--eco-rule)] bg-[var(--eco-ink-raised)] text-[var(--eco-cream)]'
-                    }`}
-                    title={g.target !== undefined ? `${g.gate} q${g.qubit}→q${g.target}` : g.gate}
-                  >
-                    {onControl && g.target !== undefined ? '●' : gateLabel(g)}
-                  </div>
-                );
-              })}
-              {circuit.gates.length === 0 && (
-                <span className="py-1 text-xs text-[var(--eco-cream-faint)]">(empty)</span>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <CircuitView circuit={circuit} />;
 }
 
 /** Probability bars — the teaching surface. Labels come pre-formatted. */
@@ -464,32 +450,15 @@ function ProbabilityBars({
 }) {
   return (
     <div className="mt-3">
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <span className="text-xs text-[var(--eco-cream-faint)]">Measurement outcomes</span>
         {result.entangled && (
-          <span className="rounded-full bg-[color-mix(in_srgb,var(--eco-athena)_25%,transparent)] px-2 py-0.5 text-[10px] font-medium text-[var(--eco-athena)]">
-            entangled
+          <span className="rounded-full bg-[rgba(52,211,153,0.15)] px-2 py-0.5 text-[10px] font-semibold text-[#34d399]">
+            🔗 entangled
           </span>
         )}
       </div>
-      <div className="space-y-1.5">
-        {result.outcomes.map((o) => (
-          <div key={o.label} className="flex items-center gap-2">
-            <span className="w-12 shrink-0 font-mono text-xs text-[var(--eco-cream-faint)]">
-              {o.label}
-            </span>
-            <div className="h-4 flex-1 overflow-hidden rounded bg-[var(--eco-ink-sunken)]">
-              <div
-                className="h-full rounded bg-[var(--eco-athena)] transition-[width] duration-300"
-                style={{ width: `${Math.round(o.probability * 100)}%` }}
-              />
-            </div>
-            <span className="w-10 shrink-0 text-right font-mono text-xs text-[var(--eco-cream-faint)]">
-              {Math.round(o.probability * 100)}%
-            </span>
-          </div>
-        ))}
-      </div>
+      <ProbBars probs={result.outcomes.map((o) => o.probability)} qubits={Math.round(Math.log2(result.outcomes.length))} />
     </div>
   );
 }

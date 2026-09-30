@@ -304,6 +304,7 @@ export async function parsePptxFile(file: File, addedBy = 'Teacher'): Promise<Li
  */
 export async function parsePdfFile(file: File, addedBy = 'Teacher'): Promise<LibraryBook> {
   const arrayBuffer = await file.arrayBuffer();
+  await import('./PdfPageImage'); // installs the pdf.js polyfill
   const pdfjsLib = await import('pdfjs-dist');
 
   // Configure worker safely with jsdelivr ESM worker matching installed pdfjs-dist version
@@ -398,4 +399,64 @@ export async function parsePdfFile(file: File, addedBy = 'Teacher'): Promise<Lib
     createdAt: new Date().toISOString(),
     pages,
   };
+}
+
+/**
+ * Turns a reference-shelf stub (cover + `sourceUrl`) into a full book:
+ * one page per PDF page, with its text for Athena's citations and the PDF's
+ * chapter outline as section headings. No page is rasterised here; the
+ * reader renders pages lazily from `sourceUrl`.
+ */
+export async function hydrateRemoteBook(
+  stub: LibraryBook,
+  onProgress?: (done: number, total: number) => void,
+): Promise<LibraryBook> {
+  if (!stub.sourceUrl) return stub;
+  const { loadPdf } = await import('./PdfPageImage');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdf = (await loadPdf(stub.sourceUrl)) as any;
+  const total: number = pdf.numPages;
+
+  // Chapter starts from the PDF outline (top level only).
+  const chapters = new Map<number, string>();
+  try {
+    const outline = (await pdf.getOutline()) ?? [];
+    for (const item of outline) {
+      try {
+        const dest = typeof item.dest === 'string' ? await pdf.getDestination(item.dest) : item.dest;
+        if (!dest) continue;
+        const index: number = await pdf.getPageIndex(dest[0]);
+        if (!chapters.has(index + 1)) chapters.set(index + 1, String(item.title).trim());
+      } catch {
+        /* an unresolvable outline entry just loses its heading */
+      }
+    }
+  } catch {
+    /* no outline */
+  }
+
+  const pages: LibraryPage[] = [stub.pages[0]!];
+  let current: string | undefined;
+  for (let n = 1; n <= total; n++) {
+    const page = await pdf.getPage(n);
+    const text = await page.getTextContent();
+    const raw = text.items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((i: any) => ('str' in i ? i.str : ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 1200);
+    const heading = chapters.get(n);
+    if (heading) current = heading;
+    pages.push({
+      pageNumber: n,
+      pdfPage: n,
+      heading,
+      sectionTitle: current,
+      rawText: `${current ? current + '. ' : ''}${raw}`,
+    });
+    if (n % 10 === 0 || n === total) onProgress?.(n, total);
+  }
+  return { ...stub, pages };
 }
