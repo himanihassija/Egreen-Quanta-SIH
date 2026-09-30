@@ -248,7 +248,7 @@ export function DigitalLibraryStage({
           </aside>
 
           {/* Center Stage: Interactive FlipBook */}
-          <main className="stage-center-book">
+          <main className="stage-center-book" style={{ minWidth: 0 }}>
             <div className="flipbook-outer-box">
               <FlipBook
                 book={book}
@@ -269,6 +269,13 @@ export function DigitalLibraryStage({
                 <ChevronLeft size={18} /> Prev
               </button>
 
+              {spreads > 24 ? (
+                // Long books: a page counter instead of hundreds of dots,
+                // which pushed the book off the right edge of the stage.
+                <div className="spread-dots-box" style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', opacity: 0.85 }}>
+                  Page {Math.max(1, localPage)} / {book.pages.length - 1}
+                </div>
+              ) : (
               <div className="spread-dots-box">
                 {Array.from({ length: spreads }).map((_, idx) => (
                   <div
@@ -277,6 +284,7 @@ export function DigitalLibraryStage({
                   />
                 ))}
               </div>
+              )}
 
               <button
                 className="nav-arrow-btn"
